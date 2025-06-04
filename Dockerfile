@@ -1,19 +1,19 @@
-ARG BASE=nvidia/cuda:11.8.0-base-ubuntu22.04
-FROM ${BASE}
+# Dockerfile for Render
+FROM python:3.10-slim
 
-RUN apt-get update && apt-get upgrade -y
-RUN apt-get install -y --no-install-recommends gcc g++ make python3 python3-dev python3-pip python3-venv python3-wheel espeak-ng libsndfile1-dev && rm -rf /var/lib/apt/lists/*
-RUN pip3 install llvmlite --ignore-installed
+# System dependencies
+RUN apt-get update && apt-get install -y git ffmpeg libsndfile1 espeak-ng
 
-# Install Dependencies:
-RUN pip3 install torch torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
-RUN rm -rf /root/.cache/pip
+# Clone the Coqui repo (already done since you're using your own fork)
+WORKDIR /app
+COPY . /app
 
-# Copy TTS repository contents:
-WORKDIR /root
-COPY . /root
+# Install with server support
+RUN pip install --upgrade pip && pip install -e .[server]
 
-RUN make install
+# Set default port
+ENV PORT=5002
+EXPOSE 5002
 
-ENTRYPOINT ["tts"]
-CMD ["--help"]
+# Start the Coqui TTS HTTP server
+CMD ["python3", "TTS/server/server.py", "--model_name", "tts_models/en/ljspeech/glow-tts", "--port", "5002"]
