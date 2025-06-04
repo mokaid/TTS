@@ -1,19 +1,26 @@
-# Dockerfile for Render
+# Use Python base, not CUDA-based image
 FROM python:3.10-slim
 
-# System dependencies
-RUN apt-get update && apt-get install -y git ffmpeg libsndfile1 espeak-ng
+# Set env variables
+ENV PYTHONUNBUFFERED=1
 
-# Clone the Coqui repo (already done since you're using your own fork)
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    espeak-ng \
+    git \
+    ffmpeg \
+    libsndfile1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip and install TTS via PyPI instead of local editable
+RUN pip install --upgrade pip
+RUN pip install TTS
+
+# Copy optional start script or use CMD directly
 WORKDIR /app
-COPY . /app
 
-# Install with server support
-RUN pip install --upgrade pip && pip install -e .[server]
-
-# Set default port
-ENV PORT=5002
+# Expose port used by TTS server
 EXPOSE 5002
 
-# Start the Coqui TTS HTTP server
-CMD ["python3", "TTS/server/server.py", "--model_name", "tts_models/en/ljspeech/glow-tts", "--port", "5002"]
+# Start TTS server (example with default model)
+CMD ["tts", "--model_name", "tts_models/en/ljspeech/tacotron2-DDC", "--out_path", "/app/output.wav", "--text", "Hello from Flowise"]
